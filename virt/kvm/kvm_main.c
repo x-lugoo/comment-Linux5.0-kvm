@@ -620,6 +620,8 @@ static int kvm_create_vm_debugfs(struct kvm *kvm, int fd)
 }
 
 /*user layer call KVM_CREATE_VM */
+
+/* 用户层调用KVM_CREATE_VM 创建 struct kvm ~jeff */
 static struct kvm *kvm_create_vm(unsigned long type)
 {
 	int r, i;
@@ -629,15 +631,21 @@ static struct kvm *kvm_create_vm(unsigned long type)
 		return ERR_PTR(-ENOMEM);
 
 	spin_lock_init(&kvm->mmu_lock);
+	/*使用当前进程的mm结构，并设置引用计数加一 ~jeff. */
 	mmgrab(current->mm);
 	kvm->mm = current->mm;
+	/*初始化 kvm中的ioeventfd和irq相关的结构 ~jeff */
 	kvm_eventfd_init(kvm);
 	mutex_init(&kvm->lock);
 	mutex_init(&kvm->irq_lock);
 	mutex_init(&kvm->slots_lock);
+	/*struct kvm结构引用计数设置为1 ~jeff. */
 	refcount_set(&kvm->users_count, 1);
 	INIT_LIST_HEAD(&kvm->devices);
 
+   /*架构代码初始化struct kvm结构，type值一般为 KVM_VM_TYPE(0)
+    *目前x86上面只支持type=0,如果是在mips上，如果type=1,则mips采用vz模式
+    *如果是type=0,mips则用TE(trap and emulate(陷入模拟)). ~jeff. */
 	r = kvm_arch_init_vm(kvm, type);
 	if (r)
 		goto out_err_no_disable;
@@ -653,6 +661,7 @@ static struct kvm *kvm_create_vm(unsigned long type)
 	BUILD_BUG_ON(KVM_MEM_SLOTS_NUM > SHRT_MAX);
 
 	r = -ENOMEM;
+	/*初始化struct kvm_memslots ~jeff */
 	for (i = 0; i < KVM_ADDRESS_SPACE_NUM; i++) {
 		struct kvm_memslots *slots = kvm_alloc_memslots();
 		if (!slots)
@@ -665,18 +674,20 @@ static struct kvm *kvm_create_vm(unsigned long type)
 		slots->generation = i * 2 - 150;
 		rcu_assign_pointer(kvm->memslots[i], slots);
 	}
-
+ /* 初始化可睡眠的rcu ~jeff .*/
 	if (init_srcu_struct(&kvm->srcu))
 		goto out_err_no_srcu;
 	if (init_srcu_struct(&kvm->irq_srcu))
 		goto out_err_no_irq_srcu;
+	/*初始化总线信息 用于保存用户层注册的mmio或者ioport,当guest触发的时候，内核会调用
+	 *注册时候的函数，然后比如通知ioeventfd等等，通知user space ~jeff */
 	for (i = 0; i < KVM_NR_BUSES; i++) {
 		rcu_assign_pointer(kvm->buses[i],
 			kzalloc(sizeof(struct kvm_io_bus), GFP_KERNEL));
 		if (!kvm->buses[i])
 			goto out_err;
 	}
-
+  /*注册mmu通知链 ~jeff */
 	r = kvm_init_mmu_notifier(kvm);
 	if (r)
 		goto out_err;
@@ -3402,9 +3413,13 @@ static long kvm_dev_ioctl(struct file *filp,
 	case KVM_CREATE_VM:
 		r = kvm_dev_ioctl_create_vm(arg);
 		break;
+	/*查询kvm中支持的扩展功能，比如是否支持MSI ~jeff */
 	case KVM_CHECK_EXTENSION:
 		r = kvm_vm_ioctl_check_extension_generic(NULL, arg);
 		break;
+	/*用户kvm_run结构,用户内核与qemu通讯传递数据，比如通知qemu当前写了mmio,还是
+	 * ioport(读或者写)或者是vm_exit的种类 ~jeff.
+	*/
 	case KVM_GET_VCPU_MMAP_SIZE:
 		if (arg)
 			goto out;
@@ -3412,6 +3427,10 @@ static long kvm_dev_ioctl(struct file *filp,
 #ifdef CONFIG_X86
 		r += PAGE_SIZE;    /* pio data page */
 #endif
+   /*用户层可以使用ioctl(kvm->sys_fd, KVM_CHECK_EXTENSION, KVM_CAP_COALESCED_MMIO)
+    *获得MMIO环的数据偏移,当guest KVM_EXIT_MMIO的时候，
+    *qemu优先处理 coalesced ring中的mmio事件 ~jeff.
+    */
 #ifdef CONFIG_KVM_MMIO
 		r += PAGE_SIZE;    /* coalesced mmio ring page */
 #endif
@@ -3512,6 +3531,11 @@ static int hardware_enable_all(void)
 	kvm_usage_count++;
 	if (kvm_usage_count == 1) {
 		atomic_set(&hardware_enable_failed, 0);
+		/*硬件上enable 所有的cpu的虚拟化，比如在x86上
+		 * cr4_set_bits(X86_CR4_VMXE);
+		 *intel_pt_handle_vmx(1);
+		 *asm volatile ("vmxon %0" : : "m"(addr));*/
+		 */
 		on_each_cpu(hardware_enable_nolock, NULL, 1);
 
 		if (atomic_read(&hardware_enable_failed)) {

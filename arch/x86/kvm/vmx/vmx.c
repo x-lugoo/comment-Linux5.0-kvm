@@ -6655,6 +6655,10 @@ static void vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	vmx_complete_interrupts(vmx);
 }
 
+/* 架构代码创建struct kvm,这样有一个好处就是可以把平台相关的
+ *结构嵌套进去，比如x86中struct kvm_vmx利用包含struct kvm的方式
+ *让struct kvm_vmx 可以通过通用的struct kvm索引到 ~jeff.
+ */
 static struct kvm *vmx_vm_alloc(void)
 {
 	struct kvm_vmx *kvm_vmx = vzalloc(sizeof(struct kvm_vmx));

@@ -2240,6 +2240,7 @@ static void kvmclock_update_fn(struct work_struct *work)
 	struct kvm *kvm = container_of(ka, struct kvm, arch);
 	struct kvm_vcpu *vcpu;
 
+	/*通知(kick )每个cpu更新时间,在下次guest退出之后再进入的时候能通知到 ~jeff */
 	kvm_for_each_vcpu(i, vcpu, kvm) {
 		kvm_make_request(KVM_REQ_CLOCK_UPDATE, vcpu);
 		kvm_vcpu_kick(vcpu);
@@ -3090,6 +3091,7 @@ int kvm_vm_ioctl_check_extension(struct kvm *kvm, long ext)
 
 }
 
+/* 查询架构代码中支持的kvm扩展功能 ~jeff */
 long kvm_arch_dev_ioctl(struct file *filp,
 			unsigned int ioctl, unsigned long arg)
 {
@@ -9119,6 +9121,7 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	spin_lock_init(&kvm->arch.pvclock_gtod_sync_lock);
 
 	kvm->arch.kvmclock_offset = -ktime_get_boot_ns();
+	/*更新tsc时间 ~jeff */
 	pvclock_update_vm_gtod_copy(kvm);
 
 	kvm->arch.guest_can_read_msr_platform_info = true;
@@ -9130,6 +9133,7 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	kvm_page_track_init(kvm);
 	kvm_mmu_init_vm(kvm);
 
+   /*调用架构相关代码初始化struct kvm ~jeff */
 	if (kvm_x86_ops->vm_init)
 		return kvm_x86_ops->vm_init(kvm);
 
