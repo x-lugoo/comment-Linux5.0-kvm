@@ -7636,6 +7636,8 @@ EXPORT_SYMBOL_GPL(__kvm_request_immediate_exit);
  * exiting to the userspace.  Otherwise, the value will be returned to the
  * userspace.
  */
+
+/*在进入客户端之前检查各种事件，包括中断信息等等 ~jeff */
 static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 {
 	int r;
@@ -7664,6 +7666,10 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 		if (kvm_check_request(KVM_REQ_MMU_SYNC, vcpu))
 			kvm_mmu_sync_roots(vcpu);
 		if (kvm_check_request(KVM_REQ_LOAD_CR3, vcpu))
+			/*设置guest的cr3 vmcs_writel(GUEST_CR3, guest_cr3)
+			 * 对于x86 开启了EPT则分别处理如果有ept则把gcr3和 eptp都写入到vmcs中
+			 * ~jeff 
+		     */
 			kvm_mmu_load_cr3(vcpu);
 		if (kvm_check_request(KVM_REQ_TLB_FLUSH, vcpu))
 			kvm_vcpu_flush_tlb(vcpu, true);

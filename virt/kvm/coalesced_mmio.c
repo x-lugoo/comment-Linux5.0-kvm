@@ -114,7 +114,8 @@ int kvm_coalesced_mmio_init(struct kvm *kvm)
 	if (!page)
 		goto out_err;
 
-	ret = 0;
+	ret = 0;\
+	/*分配一页内存给mmio ring,用于传递mmio信息给qemu ~jeff */
 	kvm->coalesced_mmio_ring = page_address(page);
 
 	/*

@@ -6689,6 +6689,7 @@ static void vmx_free_vcpu(struct kvm_vcpu *vcpu)
 static struct kvm_vcpu *vmx_create_vcpu(struct kvm *kvm, unsigned int id)
 {
 	int err;
+	/*还是老方法，申请一个struct vcpu_vmx,结构里面包含 struct kvm_vcpu ~jeff */
 	struct vcpu_vmx *vmx = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL);
 	unsigned long *msr_bitmap;
 	int cpu;
@@ -6702,7 +6703,7 @@ static struct kvm_vcpu *vmx_create_vcpu(struct kvm *kvm, unsigned int id)
 		err = -ENOMEM;
 		goto free_partial_vcpu;
 	}
-
+/*分配一个虚拟的vpid ~jeff */
 	vmx->vpid = allocate_vpid();
 
 	err = kvm_vcpu_init(&vmx->vcpu, kvm, id);

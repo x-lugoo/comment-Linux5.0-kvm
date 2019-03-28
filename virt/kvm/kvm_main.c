@@ -293,6 +293,7 @@ int kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id)
 	mutex_init(&vcpu->mutex);
 	vcpu->cpu = -1;
 	vcpu->kvm = kvm;
+	/*id是用户层传进来的 ~jeff */
 	vcpu->vcpu_id = id;
 	vcpu->pid = NULL;
 	init_swait_queue_head(&vcpu->wq);
@@ -2572,7 +2573,7 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
 
 	kvm->created_vcpus++;
 	mutex_unlock(&kvm->lock);
-
+/*真正开始创建 struct kvm_vcpu，同样交给架构代码去处理 ~jeff */
 	vcpu = kvm_arch_vcpu_create(kvm, id);
 	if (IS_ERR(vcpu)) {
 		r = PTR_ERR(vcpu);
@@ -2667,6 +2668,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
 	if (mutex_lock_killable(&vcpu->mutex))
 		return -EINTR;
 	switch (ioctl) {
+	/*user space KVM_RUN ioctl的时候开始运行vcpu ~jeff */
 	case KVM_RUN: {
 		struct pid *oldpid;
 		r = -EINVAL;

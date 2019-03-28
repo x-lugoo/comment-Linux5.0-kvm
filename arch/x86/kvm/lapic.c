@@ -2252,6 +2252,7 @@ static enum hrtimer_restart apic_timer_fn(struct hrtimer *data)
 		return HRTIMER_NORESTART;
 }
 
+/*为每一个vcpu创建lapic ~jeff */
 int kvm_create_lapic(struct kvm_vcpu *vcpu)
 {
 	struct kvm_lapic *apic;
@@ -2283,6 +2284,7 @@ int kvm_create_lapic(struct kvm_vcpu *vcpu)
 	 */
 	vcpu->arch.apic_base = MSR_IA32_APICBASE_ENABLE;
 	static_key_slow_inc(&apic_sw_disabled.key); /* sw disabled at reset */
+	/*读写lapic上的寄存器(MMIO) ~jeff */
 	kvm_iodevice_init(&apic->dev, &apic_mmio_ops);
 
 	return 0;
