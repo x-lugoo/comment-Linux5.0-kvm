@@ -7527,6 +7527,7 @@ static int enable_smi_window(struct kvm_vcpu *vcpu)
 	return 0;
 }
 
+ /* 在内核通用代码初始化kvm子系统的时候会被调用到 ~jeff */
 static __init int hardware_setup(void)
 {
 	unsigned long host_bndcfgs;

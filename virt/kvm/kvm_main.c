@@ -619,6 +619,7 @@ static int kvm_create_vm_debugfs(struct kvm *kvm, int fd)
 	return 0;
 }
 
+/*user layer call KVM_CREATE_VM */
 static struct kvm *kvm_create_vm(unsigned long type)
 {
 	int r, i;
@@ -3091,6 +3092,7 @@ static long kvm_vm_ioctl(struct file *filp,
 		return -EIO;
 	switch (ioctl) {
 	case KVM_CREATE_VCPU:
+		/* 开始创建 kvm_vcpu(对应一个虚拟cpu) ~jeff */
 		r = kvm_vm_ioctl_create_vcpu(kvm, arg);
 		break;
 	case KVM_ENABLE_CAP: {
@@ -3103,6 +3105,9 @@ static long kvm_vm_ioctl(struct file *filp,
 		break;
 	}
 	case KVM_SET_USER_MEMORY_REGION: {
+		/* 主要的作用保存好guest的物理地址和host中的虚拟地址的关系,保存在 struct kvm_memory_slot中~jeff 
+		 * Add:(x86)guest通过bios中的int15中的e820_query_map获取到内存布局和物理内存大小 ~jeff 
+		*/
 		struct kvm_userspace_memory_region kvm_userspace_mem;
 
 		r = -EFAULT;
@@ -3135,6 +3140,7 @@ static long kvm_vm_ioctl(struct file *filp,
 #endif
 #ifdef CONFIG_KVM_MMIO
 	case KVM_REGISTER_COALESCED_MMIO: {
+		/* 设置guest中的mmio,在host中会把这段内存设置成只读 ~jeff */
 		struct kvm_coalesced_mmio_zone zone;
 
 		r = -EFAULT;
@@ -3154,6 +3160,7 @@ static long kvm_vm_ioctl(struct file *filp,
 	}
 #endif
 	case KVM_IRQFD: {
+		/* 设置irqfd 用来通知内核发送中断事件给guest ~jeff */
 		struct kvm_irqfd data;
 
 		r = -EFAULT;
@@ -3163,6 +3170,10 @@ static long kvm_vm_ioctl(struct file *filp,
 		break;
 	}
 	case KVM_IOEVENTFD: {
+		/* 设置ioeventfd  qemu用来接收内核发送的ioevent,当guest操作了ioport或者mmio，
+		 * 内核就用ioeventfd通知qemu  ~jeff
+		 *
+		 */
 		struct kvm_ioeventfd data;
 
 		r = -EFAULT;
@@ -3172,6 +3183,8 @@ static long kvm_vm_ioctl(struct file *filp,
 		break;
 	}
 #ifdef CONFIG_HAVE_KVM_MSI
+
+/*通知内核发送msi中断给guest ~jeff */
 	case KVM_SIGNAL_MSI: {
 		struct kvm_msi msi;
 
@@ -3207,6 +3220,8 @@ static long kvm_vm_ioctl(struct file *filp,
 	}
 #endif
 #ifdef CONFIG_HAVE_KVM_IRQ_ROUTING
+
+/*设置中断，包括irq或者msi中断~jeff */
 	case KVM_SET_GSI_ROUTING: {
 		struct kvm_irq_routing routing;
 		struct kvm_irq_routing __user *urouting;
@@ -3322,11 +3337,18 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
 	int r;
 	struct kvm *kvm;
 	struct file *file;
-
+	
+/*开始创建 struct kvm ~jeff */
 	kvm = kvm_create_vm(type);
 	if (IS_ERR(kvm))
 		return PTR_ERR(kvm);
 #ifdef CONFIG_KVM_MMIO
+  /* MMIO，PCI规范的一部分，比如在qemu中的虚拟pci的设备的bar中设置一段mmio，guest扫描到之后会映射到它的物理空间
+    * 当guest开始写那边空间的时候就会对应到这个mmio空间，这段空间在host中只读的，所以guest每次访问都会被截获，
+    *截获之后可以进行各种神操作，比如虚拟pci设备规定写哪个注册的MMIO中的偏移值就表示发送到virtio中的数据已经发送
+    *完成请hos或者qemu接受，当写那个mmio地址的时候qemu就知道去收取数据了。
+    *或者可以利用这段mmio用来截获guest给虚拟pci设置的msi中断，等等 ~jeff 
+   */
 	r = kvm_coalesced_mmio_init(kvm);
 	if (r < 0)
 		goto put_kvm;
@@ -3334,7 +3356,7 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
 	r = get_unused_fd_flags(O_CLOEXEC);
 	if (r < 0)
 		goto put_kvm;
-
+   /*用一个匿名的inode对应到struct kvm结构 ~jeff */
 	file = anon_inode_getfile("kvm-vm", &kvm_vm_fops, kvm, O_RDWR);
 	if (IS_ERR(file)) {
 		put_unused_fd(r);
@@ -3353,6 +3375,7 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
 		fput(file);
 		return -ENOMEM;
 	}
+	/*通知用户层的udev ~jeff */
 	kvm_uevent_notify_change(KVM_EVENT_CREATE_VM, kvm);
 
 	fd_install(r, file);
@@ -3369,11 +3392,13 @@ static long kvm_dev_ioctl(struct file *filp,
 	long r = -EINVAL;
 
 	switch (ioctl) {
+	/* 查询kvm子系统的版本~jeff */
 	case KVM_GET_API_VERSION:
 		if (arg)
 			goto out;
 		r = KVM_API_VERSION;
 		break;
+	/*创建 struct kvm结构 ~jeff */
 	case KVM_CREATE_VM:
 		r = kvm_dev_ioctl_create_vm(arg);
 		break;
@@ -4122,12 +4147,14 @@ static void kvm_sched_out(struct preempt_notifier *pn,
 	kvm_arch_vcpu_put(vcpu);
 }
 
+/* 架构代码将调用此函数来初始化kvm子系统 ~jeff*/
 int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 		  struct module *module)
 {
 	int r;
 	int cpu;
 
+    /* 调回到架构代码中，这个就是内核的巧妙之处，内核代码和架构代码相互配合,你来我往构成完美姻缘 ~jeff */
 	r = kvm_arch_init(opaque);
 	if (r)
 		goto out_fail;
@@ -4139,6 +4166,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	 * kvm_arch_init must be called before kvm_irqfd_init to avoid creating
 	 * conflicts in case kvm is already setup for another implementation.
 	 */
+	/* 初始化irqfd，irqfd主要用于qemu通知内核空间给guest去注入中断，不需要系统调用去通知内核 ~jeff */
 	r = kvm_irqfd_init();
 	if (r)
 		goto out_irqfd;
@@ -4151,7 +4179,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	r = kvm_arch_hardware_setup();
 	if (r < 0)
 		goto out_free_0a;
-
+/* 通过发送IPI中断的形式让每个cpu执行 kvm_arch_check_processor_compat 函数 ~jeff */
 	for_each_online_cpu(cpu) {
 		smp_call_function_single(cpu,
 				kvm_arch_check_processor_compat,
@@ -4164,6 +4192,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 				      kvm_starting_cpu, kvm_dying_cpu);
 	if (r)
 		goto out_free_2;
+	/* reboot之前对vcpu的处理 ~jeff */
 	register_reboot_notifier(&kvm_reboot_notifier);
 
 	/* A kmem cache lets us meet the alignment requirements of fx_save. */
@@ -4180,27 +4209,38 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 		goto out_free_3;
 	}
 
+  /* kvm 异步功能支持的初始化, 比如guest发生pagefault, 这个处理工作可以放在workqueue中去处理 ~jeff */
 	r = kvm_async_pf_init();
 	if (r)
 		goto out_free;
 
+     /* 第一个fd(/dev/kvm)的函数处理集合 ,用来检测kvm版本或者 创建struct kvm等 ~jeff */
 	kvm_chardev_ops.owner = module;
+	 /* 第二个fd (struct kvm)的kvm 用来创建vcpu等等 ~jeff */
 	kvm_vm_fops.owner = module;
+	/*第三个fd,主要通过ioctl用来设置每个vcpu ~jeff */
 	kvm_vcpu_fops.owner = module;
 
+    /* 第一个开始打交道的fd，/dev/kvm的fd ~jeff */
 	r = misc_register(&kvm_dev);
 	if (r) {
 		pr_err("kvm: misc device register failed\n");
 		goto out_unreg;
 	}
 
+  /* 注册电源管理相关的处理 ~jeff */
 	register_syscore_ops(&kvm_syscore_ops);
 
+     /* 当vcpu进程和host中的进程同时在系统中调用的时候会比较复杂，还好linux支持通知链
+       * 当vcpu的进程被调度到的时候会调用kvm_sched_in函数，会保存vcpu的信息，当被抢占调出去的时候调用kvm_sched_out,
+       *清理本cpu上的vcpu信息 ~jeff 
+	  */
 	kvm_preempt_ops.sched_in = kvm_sched_in;
 	kvm_preempt_ops.sched_out = kvm_sched_out;
 
 	kvm_init_debug();
 
+   /* 初始化 vfio，vfio更设备直通有关，提供了一个接口给用户层(qemu)直接访问硬件设备和IOMMU ~jeff */
 	r = kvm_vfio_ops_init();
 	WARN_ON(r);
 
