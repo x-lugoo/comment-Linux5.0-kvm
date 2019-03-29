@@ -1016,6 +1016,7 @@ static void kvm_vz_hardware_disable(void)
 	}
 }
 
+/*enable 每个cpu成虚拟模式 ~jeff */
 static int kvm_vz_hardware_enable(void)
 {
 	/*
@@ -1026,6 +1027,11 @@ static int kvm_vz_hardware_enable(void)
 	 * CG=1:	Hit (virtual address) CACHE operations (optional).
 	 * CF=1:	Guest Config registers.
 	 */
+	 /*设置12,6寄存器(客户guest控制寄存器0)
+	   *MIPS_GCTL0_CF如果设置为1，guest访问config-0-1是允许的
+	   * MIPS_GCTL0_CP0如果设置为0，说明guest访问的所有敏感指令
+	   * 都将触发异常 ~jeff
+	   */
 	write_c0_guestctl0(MIPS_GCTL0_CP0 | MIPS_GCTL0_CF);
 
 	/* clear any pending injected virtual guest interrupts */
@@ -1043,7 +1049,7 @@ static int kvm_vz_check_extension(struct kvm *kvm, long ext)
 
 	return 0;
 }
-/*this implementation is so simply ~jeff */
+/*对应 vcpu_init 只初始化架构对应的vpid为0 ~jeff */
 static int kvm_vz_vcpu_init(struct kvm_vcpu *vcpu)
 {
 	int i;
@@ -2237,6 +2243,7 @@ static struct kvm_mips_callbacks kvm_vz_callbacks = {
 	.vcpu_reenter = kvm_vz_vcpu_reenter,
 };
 
+/*初始化的有点太简单，直接赋予了一个ops ~jeff */
 int kvm_mips_emulation_init(struct kvm_mips_callbacks **install_callbacks)
 {
 	if (!cpu_has_vz)

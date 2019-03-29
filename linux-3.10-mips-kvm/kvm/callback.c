@@ -10,5 +10,6 @@
 #include <linux/export.h>
 #include <linux/kvm_host.h>
 
+/*只放了两行代码，有点奇葩~jeff */
 struct kvm_mips_callbacks *kvm_mips_callbacks;
 EXPORT_SYMBOL_GPL(kvm_mips_callbacks);

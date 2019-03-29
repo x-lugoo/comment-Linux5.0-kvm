@@ -138,16 +138,19 @@ void kvm_arch_hardware_disable(void)
 	kvm_mips_callbacks->hardware_disable();
 }
 
+/*为空，无语了 ~jeff */
 int kvm_arch_hardware_setup(void)
 {
 	return 0;
 }
 
+/*这个每个cpu都执行的兼容检查也没有实现 ~jeff */
 void kvm_arch_check_processor_compat(void *rtn)
 {
 	*(int *)rtn = 0;
 }
 
+/* type值是用户空间传进来，龙芯的做法是强行写type值 采用vz做法 ~jeff */
 int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 {
 	unsigned long row = (1 << 14);
@@ -223,6 +226,7 @@ void kvm_arch_destroy_vm(struct kvm *kvm)
 	kvm_mips_free_gpa_pt(kvm);
 }
 
+/* mips架构对struct kvm无实现 ~jeff */
 long kvm_arch_dev_ioctl(struct file *filp, unsigned int ioctl,
 			unsigned long arg)
 {
@@ -351,6 +355,9 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 	void *general_start, *general_end;
 	int i;
 
+/*mips跟x86的处理不一样，没有采用包含的方法，
+ *而是直接申请struct kvm_cpu结构去返回~jefff
+ */
 	struct kvm_vcpu *vcpu = kzalloc(sizeof(struct kvm_vcpu), GFP_KERNEL);
 
 	if (!vcpu) {
@@ -400,6 +407,7 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 
 /* gebase register */
 	/* Save new ebase */
+/*gebase用作vcpu退出时候的异常处理 ~jeff */
 	vcpu->arch.guest_ebase = gebase;
 
 	/* Build guest exception vectors dynamically in unmapped memory */
@@ -432,11 +440,12 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 	refill_start = gebase + 0x1000;
 	/*enable WG of gsebase*/
 	write_c0_gsebase(0x800);
-	/* write refill_start address to gsebase register ~jeff */
+	/* 龙芯用9，6寄存器保存 refill异常 ~jeff */
 	write_c0_gsebase((unsigned long)(refill_start));
 
 	if (IS_ENABLED(CONFIG_KVM_MIPS_VZ) && IS_ENABLED(CONFIG_64BIT))
 		refill_start += 0x080;
+	/*设置refill处理逻辑 ~jeff */
 	refill_end = kvm_mips_build_tlb_refill_exception(refill_start, handler);
 	kvm_mips_build_tlb_refill_target(refill_start + 0x3b80, handler);
 
@@ -1216,7 +1225,7 @@ int kvm_arch_init(void *opaque)
 		kvm_err("kvm: module already exists\n");
 		return -EEXIST;
 	}
-	/* call this function in the ls_vz.c */
+	/* 龙芯使用vz来实现，在龙芯默认kvm选项中采用ls_vz  ls_vz.c ~jeff */
 	return kvm_mips_emulation_init(&kvm_mips_callbacks);
 }
 
@@ -1392,7 +1401,7 @@ int kvm_arch_vcpu_init(struct kvm_vcpu *vcpu)
 {
 	int err;
 
-  /* kvm_mips_callbacks is in ls_vz.c */
+  /* 调用 ls_vz.c 中的vcpu_init ~jeff */
 	err = kvm_mips_callbacks->vcpu_init(vcpu);
 	if (err)
 		return err;
@@ -2186,7 +2195,7 @@ static struct notifier_block kvm_mips_csr_die_notifier = {
  * */
 static void build_lsvz_guest_mode_reenter(void)
 {
-/* Don't know what this address mean ~jeff */
+/* 搞不懂为什么这样写代码，看不懂为什么是这个地址 ~jeff */
 	u32 *p = (void *)0xffffffff80100180;
 	uasm_i_nop(&p);
 	uasm_i_nop(&p);
@@ -2200,10 +2209,10 @@ static void build_lsvz_guest_mode_reenter(void)
 
 }
 #endif
-/* the first function for mips to init kvm ~jeff */
+/* mips架构开始初始化kvm ~jeff */
 static int __init kvm_mips_init(void)
 {
-	int ret;
+	int ret;s
 
 #ifdef CONFIG_CPU_LOONGSON3
 	build_lsvz_guest_mode_reenter();
@@ -2212,7 +2221,7 @@ static int __init kvm_mips_init(void)
 	ret = kvm_mips_entry_setup();
 	if (ret)
 		return ret;
-
+   /*调入进kvm通用的代码中kvm_init ~jeff */
 	ret = kvm_init(NULL, sizeof(struct kvm_vcpu), 0, THIS_MODULE);
 
 	if (ret)

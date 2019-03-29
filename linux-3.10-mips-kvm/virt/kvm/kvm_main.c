@@ -227,6 +227,7 @@ int kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id)
 	vcpu->kvm = kvm;
 #ifdef CONFIG_CPU_LOONGSON3
 	/* Distinct the guest.base.cpuno with root.ebase.cpuno */
+/*vcpu_id本是由用户空间传进来的，现在还不知道龙芯的代码为什么要或上0x100 ~jeff */
 	vcpu->vcpu_id = id | 0x100;
 #else
 	vcpu->vcpu_id = id;
@@ -2228,6 +2229,7 @@ static int create_vcpu_fd(struct kvm_vcpu *vcpu)
 /*
  * Creates some virtual cpus.  Good luck creating more than one.
  */
+ /*架构代码创建struct kvm_vcpu ~jeff */
 static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
 {
 	int r;
