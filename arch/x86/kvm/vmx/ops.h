@@ -206,7 +206,7 @@ static inline void vmcs_load(struct vmcs *vmcs)
 		printk(KERN_ERR "kvm: vmptrld %p/%llx failed\n",
 		       vmcs, phys_addr);
 }
-
+/*调用invvpid使vpid范围内的cache失效(包括gva到gpa，和gpa到hpa的cache) ~jeff */
 static inline void __invvpid(unsigned long ext, u16 vpid, gva_t gva)
 {
 	struct {
@@ -221,6 +221,7 @@ static inline void __invvpid(unsigned long ext, u16 vpid, gva_t gva)
 	BUG_ON(error);
 }
 
+/*调用invetp指令对 GPA转换HPA而产生的cache进行刷新 ~jeff */
 static inline void __invept(unsigned long ext, u64 eptp, gpa_t gpa)
 {
 	struct {

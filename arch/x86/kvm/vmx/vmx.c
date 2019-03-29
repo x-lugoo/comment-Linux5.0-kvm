@@ -2124,7 +2124,10 @@ static int hardware_enable(void)
 	 * for the loaded_vmcss_on_cpu list is empty!
 	 */
 	crash_enable_local_vmclear(cpu);
-
+   /*msr中的一个寄存器MSR_IA32_FEATURE_CONTROL控制着vmxon指令的执行，
+    *要想执行vmxon,必须首先设置寄存器的bit0=1，bit0代表着lock,
+    *如果想要在smx模式的outside执行vmx,则设置bit2位1 ~jeff
+    */
 	rdmsrl(MSR_IA32_FEATURE_CONTROL, old);
 
 	test_bits = FEATURE_CONTROL_LOCKED;
