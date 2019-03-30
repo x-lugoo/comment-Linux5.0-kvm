@@ -7745,6 +7745,8 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 			kvm_hv_process_stimers(vcpu);
 	}
 
+	/* 检查是否有event request ~jeff */
+
 	if (kvm_check_request(KVM_REQ_EVENT, vcpu) || req_int_win) {
 		++vcpu->stat.req_event;
 		kvm_apic_accept_events(vcpu);
@@ -7752,6 +7754,7 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 			r = 1;
 			goto out;
 		}
+		/* 注入blocking events ,中断，异常，NMI等等 ~jeff */
 
 		if (inject_pending_event(vcpu, req_int_win) != 0)
 			req_immediate_exit = true;
@@ -7867,6 +7870,7 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 	 * can (a) read the correct value of the debug registers, (b) set
 	 * KVM_DEBUGREG_WONT_EXIT again.
 	 */
+	 /* 下面就是vm_exit之后的代码 ~jeff */
 	if (unlikely(vcpu->arch.switch_db_regs & KVM_DEBUGREG_WONT_EXIT)) {
 		WARN_ON(vcpu->guest_debug & KVM_GUESTDBG_USE_HW_BP);
 		kvm_x86_ops->sync_dirty_debug_regs(vcpu);

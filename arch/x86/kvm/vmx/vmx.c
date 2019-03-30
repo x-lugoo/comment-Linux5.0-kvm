@@ -1479,7 +1479,7 @@ static void vmx_clear_hlt(struct kvm_vcpu *vcpu)
 			vmcs_read32(GUEST_ACTIVITY_STATE) == GUEST_ACTIVITY_HLT)
 		vmcs_write32(GUEST_ACTIVITY_STATE, GUEST_ACTIVITY_ACTIVE);
 }
-
+/* 真正注入异常 ~jeff */
 static void vmx_queue_exception(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
@@ -6374,7 +6374,7 @@ static void __vmx_vcpu_run(struct kvm_vcpu *vcpu, struct vcpu_vmx *vmx)
 
 	if (static_branch_unlikely(&vmx_l1d_should_flush))
 		vmx_l1d_flush(vcpu);
-
+/* 进入guest之前保存host状态，然后launch,恢复host状态,保存guest状态 ~jeff */
 	asm(
 		/* Store host registers */
 		"push %%" _ASM_DX "; push %%" _ASM_BP ";"
@@ -6423,6 +6423,7 @@ static void __vmx_vcpu_run(struct kvm_vcpu *vcpu, struct vcpu_vmx *vmx)
 		/* Load guest RCX.  This kills the vmx_vcpu pointer! */
 		"mov %c[rcx](%%" _ASM_CX "), %%" _ASM_CX " \n\t"
 
+/* 调用真正的launch操作进入guest模式，vmx_vmenter函数在 vmenter.S文件~jeff */
 		/* Enter guest mode */
 		"call vmx_vmenter\n\t"
 
@@ -6531,17 +6532,20 @@ static void vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	if (vmx->nested.need_vmcs12_sync)
 		nested_sync_from_vmcs12(vcpu);
 
+/* 这是guest的RSP和RIP (堆栈指针和pc指针) ~jeff */
 	if (test_bit(VCPU_REGS_RSP, (unsigned long *)&vcpu->arch.regs_dirty))
 		vmcs_writel(GUEST_RSP, vcpu->arch.regs[VCPU_REGS_RSP]);
 	if (test_bit(VCPU_REGS_RIP, (unsigned long *)&vcpu->arch.regs_dirty))
 		vmcs_writel(GUEST_RIP, vcpu->arch.regs[VCPU_REGS_RIP]);
 
+   /* 保存host目前的cr3 ~jeff */
 	cr3 = __get_current_cr3_fast();
 	if (unlikely(cr3 != vmx->loaded_vmcs->host_state.cr3)) {
 		vmcs_writel(HOST_CR3, cr3);
 		vmx->loaded_vmcs->host_state.cr3 = cr3;
 	}
 
+   /* 保存目前cpu中的cr4寄存器 ~jeff */
 	cr4 = cr4_read_shadow();
 	if (unlikely(cr4 != vmx->loaded_vmcs->host_state.cr4)) {
 		vmcs_writel(HOST_CR4, cr4);
