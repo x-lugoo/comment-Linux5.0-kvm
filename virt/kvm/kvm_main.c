@@ -4173,7 +4173,7 @@ static void kvm_sched_out(struct preempt_notifier *pn,
 	kvm_arch_vcpu_put(vcpu);
 }
 
-/* 架构代码将调用此函数来初始化kvm子系统 ~jeff*/
+/* 架构代码将调用此函数来初始化kvm子系统 ~jeff */
 int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 		  struct module *module)
 {
@@ -4235,7 +4235,12 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 		goto out_free_3;
 	}
 
-  /* kvm 异步功能支持的初始化, 比如guest发生pagefault, 这个处理工作可以放在workqueue中去处理 ~jeff */
+  /**
+   * kvm 异步page fault支持的初始化, 比如guest发生pagefault, 这个处理工作可以放在workqueue中去处理 
+   * asyncPf (asynchronous page fault ).当host内存缺少的时候会把guest的内存也swap out,当guest访问那块
+   * 内存的时候会suspended,只有等待host让page swap back才能让guest保持运行。
+   * kvm_async_pf的作用是，让guest在suspend的时候去执行其他的task ~jeff 
+   */
 	r = kvm_async_pf_init();
 	if (r)
 		goto out_free;
@@ -4244,7 +4249,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	kvm_chardev_ops.owner = module;
 	 /* 第二个fd (struct kvm)的kvm 用来创建vcpu等等 ~jeff */
 	kvm_vm_fops.owner = module;
-	/*第三个fd,主要通过ioctl用来设置每个vcpu ~jeff */
+	/* 第三个fd,主要通过ioctl用来设置每个vcpu ~jeff */
 	kvm_vcpu_fops.owner = module;
 
     /* 第一个开始打交道的fd，/dev/kvm的fd ~jeff */
@@ -4257,9 +4262,11 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
   /* 注册电源管理相关的处理 ~jeff */
 	register_syscore_ops(&kvm_syscore_ops);
 
-     /* 当vcpu进程和host中的进程同时在系统中调用的时候会比较复杂，还好linux支持通知链
-       * 当vcpu的进程被调度到的时候会调用kvm_sched_in函数，会保存vcpu的信息，当被抢占调出去的时候调用kvm_sched_out,
-       *清理本cpu上的vcpu信息 ~jeff 
+     /**
+      * 当vcpu进程和host中的进程同时在系统中调用的时候会比较复杂，还好linux支持通知链
+      * 当vcpu的进程被调度到的时候会调用kvm_sched_in函数,会加载guest状态,
+      * 当被调度出去的时候调用vm_sched_out, 加载host状态，保存guest状态,
+      * merged in 2.6.23 ~jeff 
 	  */
 	kvm_preempt_ops.sched_in = kvm_sched_in;
 	kvm_preempt_ops.sched_out = kvm_sched_out;

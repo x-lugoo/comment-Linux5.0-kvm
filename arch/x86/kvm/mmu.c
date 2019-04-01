@@ -5325,7 +5325,12 @@ static int make_mmu_pages_available(struct kvm_vcpu *vcpu)
 		return -ENOSPC;
 	return 0;
 }
-
+/* guest access->VMEXIT->kvm_mmu_page_fault
+ * ->gpn_to_pfn() ->get_user_pages_fast(){no previously mapped page and no swap entry found}
+ * empty page is allocated 
+ * page is added into shadow/nested page table ~jeff.
+ *
+ */
 int kvm_mmu_page_fault(struct kvm_vcpu *vcpu, gva_t cr2, u64 error_code,
 		       void *insn, int insn_len)
 {
