@@ -12,7 +12,13 @@
  * the COPYING file in the top-level directory.
  *
  */
-
+/**
+ * 性能问题的类型:
+ * Algorithmic networking storage cache/tlv use
+ * SMP/NUMA language runtime scheduling 
+ * problems induced by virtualization layer. 
+ * 支持 perf kvm ~jeff 
+ */
 #include <linux/types.h>
 #include <linux/kvm_host.h>
 #include <linux/perf_event.h>

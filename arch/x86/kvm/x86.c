@@ -9066,6 +9066,9 @@ int kvm_arch_vcpu_init(struct kvm_vcpu *vcpu)
 	vcpu->arch.pat = MSR_IA32_CR_PAT_DEFAULT;
 
 	kvm_async_pf_hash_reset(vcpu);
+	/**
+	*  性能监控单元的初始化，允许虚拟机用户监控guest的性能问题 ~jeff 
+	*/
 	kvm_pmu_init(vcpu);
 
 	vcpu->arch.pending_external_vector = -1;
