@@ -632,21 +632,21 @@ static struct kvm *kvm_create_vm(unsigned long type)
 		return ERR_PTR(-ENOMEM);
 
 	spin_lock_init(&kvm->mmu_lock);
-	/*使用当前进程的mm结构，并设置引用计数加一 ~jeff. */
+	/* 使用当前进程的mm结构，并设置引用计数加一 ~jeff. */
 	mmgrab(current->mm);
 	kvm->mm = current->mm;
-	/*初始化 kvm中的ioeventfd和irq相关的结构 ~jeff */
+	/* 初始化 kvm中的ioeventfd和irq相关的结构 ~jeff */
 	kvm_eventfd_init(kvm);
 	mutex_init(&kvm->lock);
 	mutex_init(&kvm->irq_lock);
 	mutex_init(&kvm->slots_lock);
-	/*struct kvm结构引用计数设置为1 ~jeff. */
+	/* struct kvm结构引用计数设置为1 ~jeff. */
 	refcount_set(&kvm->users_count, 1);
 	INIT_LIST_HEAD(&kvm->devices);
 
-   /*架构代码初始化struct kvm结构，type值一般为 KVM_VM_TYPE(0)
-    *目前x86上面只支持type=0,如果是在mips上，如果type=1,则mips采用vz模式
-    *如果是type=0,mips则用TE(trap and emulate(陷入模拟)). ~jeff. */
+   /*  架构代码初始化struct kvm结构，type值一般为 KVM_VM_TYPE(0)
+     * 目前x86上面只支持type=0,如果是在mips上，如果type=1,则mips采用vz模式
+     * 如果是type=0,mips则用TE(trap and emulate(陷入模拟)). ~jeff. */
 	r = kvm_arch_init_vm(kvm, type);
 	if (r)
 		goto out_err_no_disable;
@@ -2668,7 +2668,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
 	if (mutex_lock_killable(&vcpu->mutex))
 		return -EINTR;
 	switch (ioctl) {
-	/*user space KVM_RUN ioctl的时候开始运行vcpu ~jeff */
+	/* user space KVM_RUN ioctl的时候开始运行vcpu ~jeff */
 	case KVM_RUN: {
 		struct pid *oldpid;
 		r = -EINVAL;
@@ -3411,17 +3411,17 @@ static long kvm_dev_ioctl(struct file *filp,
 			goto out;
 		r = KVM_API_VERSION;
 		break;
-	/*创建 struct kvm结构 ~jeff */
+	/* 创建 struct kvm结构 ~jeff */
 	case KVM_CREATE_VM:
 		r = kvm_dev_ioctl_create_vm(arg);
 		break;
-	/*查询kvm中支持的扩展功能，比如是否支持MSI ~jeff */
+	/* 查询kvm中支持的扩展功能，比如是否支持MSI ~jeff */
 	case KVM_CHECK_EXTENSION:
 		r = kvm_vm_ioctl_check_extension_generic(NULL, arg);
 		break;
-	/*用户kvm_run结构,用户内核与qemu通讯传递数据，比如通知qemu当前写了mmio,还是
+	/* 用户kvm_run结构,用户内核与qemu通讯传递数据，比如通知qemu当前写了mmio,还是
 	 * ioport(读或者写)或者是vm_exit的种类 ~jeff.
-	*/
+	 */
 	case KVM_GET_VCPU_MMAP_SIZE:
 		if (arg)
 			goto out;
