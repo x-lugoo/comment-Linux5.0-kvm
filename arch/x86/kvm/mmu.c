@@ -1237,6 +1237,11 @@ static int mapping_level(struct kvm_vcpu *vcpu, gfn_t large_gfn,
 /*
  * Returns the number of pointers in the rmap chain, not counting the new one.
  */
+ /*
+  * EPT反向映射,作用是利用GFN找到 spte(EPT中的第二级页表) ~jeff
+  * EPT采用两级映射方式 GVA->GPA GPA->HPA 称为TDP(two dimentional paging) 
+  * 
+  */
 static int pte_list_add(struct kvm_vcpu *vcpu, u64 *spte,
 			struct kvm_rmap_head *rmap_head)
 {

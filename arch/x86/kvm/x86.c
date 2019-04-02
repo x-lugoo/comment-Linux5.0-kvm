@@ -6923,7 +6923,9 @@ int kvm_arch_init(void *opaque)
 		printk(KERN_ERR "kvm: failed to allocate percpu kvm_shared_msrs\n");
 		goto out_free_x86_fpu_cache;
 	}
-
+  /*
+   * x86 kvm mmu开始初始化~jeff 
+   */
 	r = kvm_mmu_module_init();
 	if (r)
 		goto out_free_percpu;

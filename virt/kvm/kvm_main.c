@@ -3369,7 +3369,7 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
 	r = get_unused_fd_flags(O_CLOEXEC);
 	if (r < 0)
 		goto put_kvm;
-   /*用一个匿名的inode对应到struct kvm结构 ~jeff */
+   /*用一个匿名的inode对应到struct kvm结构, kvm作为文件的private变量传递进去 ~jeff */
 	file = anon_inode_getfile("kvm-vm", &kvm_vm_fops, kvm, O_RDWR);
 	if (IS_ERR(file)) {
 		put_unused_fd(r);
