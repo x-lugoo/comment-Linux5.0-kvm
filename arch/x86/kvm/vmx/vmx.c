@@ -3992,6 +3992,10 @@ static void vmx_compute_secondary_exec_control(struct vcpu_vmx *vmx)
 	vmx->secondary_exec_control = exec_control;
 }
 
+ /*
+  * EPT对mmio的特殊处理，通过设置EPT VMX_EPT_MISCONFIG_WX_VALUE(110b)
+  * 专门用misconfig异常来触发MMIO ~jeff 
+  */
 static void ept_set_mmio_spte_mask(void)
 {
 	/*
@@ -5513,6 +5517,12 @@ static int (*kvm_vmx_exit_handlers[])(struct kvm_vcpu *vcpu) = {
 	[EXIT_REASON_MCE_DURING_VMENTRY]      = handle_machine_check,
 	[EXIT_REASON_GDTR_IDTR]		      = handle_desc,
 	[EXIT_REASON_LDTR_TR]		      = handle_desc,
+	/*
+	 * violation -> page not present
+	 * misconfig -> reserved bit set
+	 * EPT异常处理 正常流程是在没有访问权限或者页不在的情况下发生violation
+	 * misconfig是针对发生在mmio的情况，是对于mmio的一种特殊处理优化，~jeff 
+	 */
 	[EXIT_REASON_EPT_VIOLATION]	      = handle_ept_violation,
 	[EXIT_REASON_EPT_MISCONFIG]           = handle_ept_misconfig,
 	[EXIT_REASON_PAUSE_INSTRUCTION]       = handle_pause,
