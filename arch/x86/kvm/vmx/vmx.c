@@ -3257,6 +3257,10 @@ static bool cs_ss_rpl_check(struct kvm_vcpu *vcpu)
  * not.
  * We assume that registers are always usable
  */
+
+/*
+ * 检查是否需要模拟,正常情况下kvm是不需要模拟的 ~jeff
+ */
 static bool guest_state_valid(struct kvm_vcpu *vcpu)
 {
 	if (enable_unrestricted_guest)
@@ -4575,6 +4579,9 @@ static int handle_triple_fault(struct kvm_vcpu *vcpu)
 	return 0;
 }
 
+/*
+ * ioport的处理 ~jeff 
+ */
 static int handle_io(struct kvm_vcpu *vcpu)
 {
 	unsigned long exit_qualification;
@@ -5770,6 +5777,10 @@ static void dump_vmcs(void)
  * The guest has exited.  See if we can fix it or if we need userspace
  * assistance.
  */
+ /*
+  * 发生vm_exit之后的总入口函数(除了外部中断的处理) ~jeff
+  */
+  
 static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
@@ -5789,6 +5800,10 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 		vmx_flush_pml_buffer(vcpu);
 
 	/* If guest state is invalid, start emulating */
+	/*
+	 * 正常情况下是不需要模拟的，比如kvm host大多都是在保护模式上运行,
+	 * 如果强行模拟kvm将无法运行 ~jeff
+	 */
 	if (vmx->emulation_required)
 		return handle_invalid_guest_state(vcpu);
 
@@ -5828,6 +5843,9 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 		vcpu->run->internal.data[0] = vectoring_info;
 		vcpu->run->internal.data[1] = exit_reason;
 		vcpu->run->internal.data[2] = vcpu->arch.exit_qualification;
+		/*
+		 *  这种情况大多是MMIO异常，发生EXIT_REASON_EPT_MISCONFIG, 获取guest物理地址 ~jeff
+		 */
 		if (exit_reason == EXIT_REASON_EPT_MISCONFIG) {
 			vcpu->run->internal.ndata++;
 			vcpu->run->internal.data[3] =
@@ -5857,6 +5875,9 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 
 	if (exit_reason < kvm_vmx_max_exit_handlers
 	    && kvm_vmx_exit_handlers[exit_reason])
+	    /*
+	      * 相当于vm_exit向量 ~jeff
+	      */
 		return kvm_vmx_exit_handlers[exit_reason](vcpu);
 	else {
 		vcpu_unimpl(vcpu, "vmx: unexpected exit reason 0x%x\n",
@@ -6123,6 +6144,7 @@ static void vmx_complete_atomic_exit(struct vcpu_vmx *vmx)
 	vmx->exit_intr_info = exit_intr_info;
 
 	/* if exit due to PF check for async PF */
+	/* vm_exit 如果是page fault, 检查一下时候需要异步处理page fault ~jeff */
 	if (is_page_fault(exit_intr_info))
 		vmx->vcpu.arch.apf.host_apf_reason = kvm_read_and_reset_pf_reason();
 
@@ -6132,6 +6154,12 @@ static void vmx_complete_atomic_exit(struct vcpu_vmx *vmx)
 		kvm_machine_check();
 
 	/* We need to handle NMIs before interrupts are enabled */
+	/*
+	 * 注意这个nmi不是注射进去的nmi ~jeff 
+	 * 如果要注入一个nmi，可以使用kvmtool工具 lkvm debug -m 0 -n guest-2444
+	 * (跟guest-2444运行实例注入一个nmi中断，可以在 host /sys/kernel/debug/kvm/2444-4/
+	 * 中 cat nmi_injections 可以看到注入之后的变化 ~jeff 
+	 */
 	if (is_nmi(exit_intr_info)) {
 		kvm_before_interrupt(&vmx->vcpu);
 		asm("int $2");
@@ -6606,6 +6634,7 @@ static void vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	 * If the L02 MSR bitmap does not intercept the MSR, then we need to
 	 * save it.
 	 */
+	 /* 这个地方就是vm_exit最开始处理的地方 ~jeff */
 	if (unlikely(!msr_write_intercepted(vcpu, MSR_IA32_SPEC_CTRL)))
 		vmx->spec_ctrl = native_read_msr(MSR_IA32_SPEC_CTRL);
 
@@ -6660,11 +6689,13 @@ static void vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	vmx->nested.nested_run_pending = 0;
 	vmx->idt_vectoring_info = 0;
 
+   /* 在这个地方获取退出的原因 后面很多地方都是根据 vmx->exit_reason来判断 ~jeff */
 	vmx->exit_reason = vmx->fail ? 0xdead : vmcs_read32(VM_EXIT_REASON);
 	if (vmx->fail || (vmx->exit_reason & VMX_EXIT_REASONS_FAILED_VMENTRY))
 		return;
 
 	vmx->loaded_vmcs->launched = 1;
+	/* 获取跟vm_exit跟中断相关的向量 ~jeff */
 	vmx->idt_vectoring_info = vmcs_read32(IDT_VECTORING_INFO_FIELD);
 
 	vmx_complete_atomic_exit(vmx);

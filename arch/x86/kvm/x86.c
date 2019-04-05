@@ -5561,6 +5561,10 @@ emul_write:
 	return emulator_write_emulated(ctxt, addr, new, bytes, exception);
 }
 
+/* 
+ * 当guest读写端口时候，可能之前qemu已经在此端口号注册了ioeventfd,
+ * 这个时候正好利用ioeventfd去通知qemu ~jeff
+ */
 static int kernel_pio(struct kvm_vcpu *vcpu, void *pd)
 {
 	int r = 0, i;
@@ -5589,11 +5593,12 @@ static int emulator_pio_in_out(struct kvm_vcpu *vcpu, int size,
 	vcpu->arch.pio.count  = count;
 	vcpu->arch.pio.size = size;
 
+     /* 触发注册在io总线上的事件 ~jeff */
 	if (!kernel_pio(vcpu, vcpu->arch.pio_data)) {
 		vcpu->arch.pio.count = 0;
 		return 1;
 	}
-
+     /* 这个地方正式vcpu->run 的io的地方，这些数据将会传给用户层去处理 */
 	vcpu->run->exit_reason = KVM_EXIT_IO;
 	vcpu->run->io.direction = in ? KVM_EXIT_IO_IN : KVM_EXIT_IO_OUT;
 	vcpu->run->io.size = size;
@@ -6557,6 +6562,7 @@ static int complete_fast_pio_in(struct kvm_vcpu *vcpu)
 	return 1;
 }
 
+/* 端口读的时候，数据放在guest RAX寄存器中 ~jeff */
 static int kvm_fast_pio_in(struct kvm_vcpu *vcpu, int size,
 			   unsigned short port)
 {
@@ -7900,6 +7906,9 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 	kvm_put_guest_xcr0(vcpu);
 
 	kvm_before_interrupt(vcpu);
+	/*
+	 * 调用host中的中断处理函数 ~jeff
+	 */
 	kvm_x86_ops->handle_external_intr(vcpu);
 	kvm_after_interrupt(vcpu);
 
