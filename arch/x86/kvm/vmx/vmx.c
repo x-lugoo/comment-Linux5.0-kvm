@@ -4517,6 +4517,7 @@ static int handle_exception(struct kvm_vcpu *vcpu)
 		cr2 = vmcs_readl(EXIT_QUALIFICATION);
 		/* EPT won't cause page fault directly */
 		WARN_ON_ONCE(!vcpu->arch.apf.host_apf_reason && enable_ept);
+		/* 处理没有EPT情况下的page fault ~jeff */
 		return kvm_handle_page_fault(vcpu, error_code, cr2, NULL, 0);
 	}
 
@@ -5489,10 +5490,12 @@ static int handle_encls(struct kvm_vcpu *vcpu)
  * to be done to userspace and return 0.
  */
 static int (*kvm_vmx_exit_handlers[])(struct kvm_vcpu *vcpu) = {
+  /* 处理没有EPT情况下的page fault等 ~jeff */
 	[EXIT_REASON_EXCEPTION_NMI]           = handle_exception,
 	[EXIT_REASON_EXTERNAL_INTERRUPT]      = handle_external_interrupt,
 	[EXIT_REASON_TRIPLE_FAULT]            = handle_triple_fault,
 	[EXIT_REASON_NMI_WINDOW]	      = handle_nmi_window,
+	/* 处理ioport 读写 ~jeff */
 	[EXIT_REASON_IO_INSTRUCTION]          = handle_io,
 	[EXIT_REASON_CR_ACCESS]               = handle_cr,
 	[EXIT_REASON_DR_ACCESS]               = handle_dr,

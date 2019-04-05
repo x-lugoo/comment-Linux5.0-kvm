@@ -3972,6 +3972,7 @@ static int nonpaging_page_fault(struct kvm_vcpu *vcpu, gva_t gva,
 	if (page_fault_handle_page_track(vcpu, error_code, gfn))
 		return RET_PF_EMULATE;
 
+  /* guest内核第一次读内存会走到这里 r=0 ~jeff */
 	r = mmu_topup_memory_caches(vcpu);
 	if (r)
 		return r;
@@ -4144,6 +4145,8 @@ out_unlock:
 	kvm_release_pfn_clean(pfn);
 	return RET_PF_RETRY;
 }
+
+/* 内核刚启动时候没有打开分页,首先会调用这个函数 ~jeff */
 
 static void nonpaging_init_context(struct kvm_vcpu *vcpu,
 				   struct kvm_mmu *context)
@@ -4892,6 +4895,7 @@ kvm_calc_shadow_mmu_root_page_role(struct kvm_vcpu *vcpu, bool base_only)
 	return role;
 }
 
+/* EPT=0的情况 ~jeff */
 void kvm_init_shadow_mmu(struct kvm_vcpu *vcpu)
 {
 	struct kvm_mmu *context = vcpu->arch.mmu;
@@ -4902,6 +4906,7 @@ void kvm_init_shadow_mmu(struct kvm_vcpu *vcpu)
 	if (new_role.as_u64 == context->mmu_role.as_u64)
 		return;
 
+   /* 内核刚启动时候没有打开分页,首先会进去下面的if ~jeff */
 	if (!is_paging(vcpu))
 		nonpaging_init_context(vcpu, context);
 	else if (is_long_mode(vcpu))
@@ -4972,6 +4977,7 @@ void kvm_init_shadow_ept_mmu(struct kvm_vcpu *vcpu, bool execonly,
 }
 EXPORT_SYMBOL_GPL(kvm_init_shadow_ept_mmu);
 
+/* 无EPT的情况 ~jeff */
 static void init_kvm_softmmu(struct kvm_vcpu *vcpu)
 {
 	struct kvm_mmu *context = vcpu->arch.mmu;
@@ -5036,7 +5042,7 @@ void kvm_init_mmu(struct kvm_vcpu *vcpu, bool reset_roots)
 {
 	if (reset_roots) {
 		uint i;
-
+         /* 如果ept=0 的情况下程序会走到这里 ~jeff */
 		vcpu->arch.mmu->root_hpa = INVALID_PAGE;
 
 		for (i = 0; i < KVM_MMU_NUM_PREV_ROOTS; i++)
@@ -5046,8 +5052,10 @@ void kvm_init_mmu(struct kvm_vcpu *vcpu, bool reset_roots)
 	if (mmu_is_nested(vcpu))
 		init_kvm_nested_mmu(vcpu);
 	else if (tdp_enabled)
+		/* 在ept=1的情况下会运行到这里 tdp代表两级页表，EPT的模型 ~jeff */
 		init_kvm_tdp_mmu(vcpu);
 	else
+		 /* 如果ept=0 的情况下程序会走到这里 ~jeff */
 		init_kvm_softmmu(vcpu);
 }
 EXPORT_SYMBOL_GPL(kvm_init_mmu);
@@ -5344,6 +5352,11 @@ int kvm_mmu_page_fault(struct kvm_vcpu *vcpu, gva_t cr2, u64 error_code,
 	bool direct = vcpu->arch.mmu->direct_map;
 
 	/* With shadow page tables, fault_address contains a GVA or nGPA.  */
+
+	/*
+	 *  在ept=0的时候，第一次page fault会进入这个if中 标号1 
+	 *  第一次page fault error_code = 0x4 ,cr2 = 0x10200 ~jeff 
+	 */
 	if (vcpu->arch.mmu->direct_map) {
 		vcpu->arch.gpa_available = true;
 		vcpu->arch.gpa_val = cr2;
@@ -5356,6 +5369,7 @@ int kvm_mmu_page_fault(struct kvm_vcpu *vcpu, gva_t cr2, u64 error_code,
 			goto emulate;
 	}
 
+	/* 在ept=0的时候，第一次page fault会进入这个if中 标号2 ~jeff */
 	if (r == RET_PF_INVALID) {
 		r = vcpu->arch.mmu->page_fault(vcpu, cr2,
 					       lower_32_bits(error_code),
@@ -5363,6 +5377,7 @@ int kvm_mmu_page_fault(struct kvm_vcpu *vcpu, gva_t cr2, u64 error_code,
 		WARN_ON(r == RET_PF_INVALID);
 	}
 
+   /* 在ept=0的时候，第一次page fault会进入这个if中 标号3 ~jeff */
 	if (r == RET_PF_RETRY)
 		return 1;
 	if (r < 0)

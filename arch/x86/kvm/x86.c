@@ -172,6 +172,7 @@ static struct kvm_shared_msrs __percpu *shared_msrs;
 
 struct kvm_stats_debugfs_item debugfs_entries[] = {
 	{ "pf_fixed", VCPU_STAT(pf_fixed) },
+	/* ept=0的情况下才会出现page fault guest ~jeff  */
 	{ "pf_guest", VCPU_STAT(pf_guest) },
 	{ "tlb_flush", VCPU_STAT(tlb_flush) },
 	{ "invlpg", VCPU_STAT(invlpg) },
