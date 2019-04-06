@@ -171,42 +171,135 @@ static struct kvm_shared_msrs_global __read_mostly shared_msrs_global;
 static struct kvm_shared_msrs __percpu *shared_msrs;
 
 struct kvm_stats_debugfs_item debugfs_entries[] = {
+	/*
+	 * Number of fixed (non-paging) page table entry (PTE) maps. 来自官方
+	 */
 	{ "pf_fixed", VCPU_STAT(pf_fixed) },
-	/* ept=0的情况下才会出现page fault guest ~jeff  */
+	/*
+	 * Number of page faults injected into guests. 来自官方
+	 * ept=0的情况下才会出现page fault guest ~jeff 
+	 */
 	{ "pf_guest", VCPU_STAT(pf_guest) },
+	/* Number of tlb_flush operations performed by the hypervisor 来自官方 */
 	{ "tlb_flush", VCPU_STAT(tlb_flush) },
+	/* 刷新线性地址对应的tlb ~jeff */
 	{ "invlpg", VCPU_STAT(invlpg) },
+	/*
+	 * The count of all VMEXIT calls. 来自官方
+	 */
 	{ "exits", VCPU_STAT(exits) },
+	/* 
+	 * ioport vm_exit ~jeff
+	 * Number of guest exits from I/O port accesses. 来自官方
+	 */
 	{ "io_exits", VCPU_STAT(io_exits) },
+	/* 读写mmio */
 	{ "mmio_exits", VCPU_STAT(mmio_exits) },
+	/* 
+	 * Number of guest exits due to pending signals from the host.来自官方
+	 * vcpu在运行过程中收到信号的退出情况，可能是用户所为 ~jeff
+	 */
 	{ "signal_exits", VCPU_STAT(signal_exits) },
+	/*
+	 * Number of guest exits from an outstanding interrupt window.来自官方
+	 */ 
 	{ "irq_window", VCPU_STAT(irq_window_exits) },
+	/*
+	 * Number of guest exits from (outstanding) Non-maskable Interrupt (NMI) windows.来自官方
+	 */
 	{ "nmi_window", VCPU_STAT(nmi_window_exits) },
+	/*
+	 * Number of guest exits due to halt calls. This type of 
+	 * exit is usually seen when a guest is idle. 来自官方
+	 */
 	{ "halt_exits", VCPU_STAT(halt_exits) },
 	{ "halt_successful_poll", VCPU_STAT(halt_successful_poll) },
 	{ "halt_attempted_poll", VCPU_STAT(halt_attempted_poll) },
 	{ "halt_poll_invalid", VCPU_STAT(halt_poll_invalid) },
+	/*
+	 * Number of wakeups from a halt.来自官方
+	 */
 	{ "halt_wakeup", VCPU_STAT(halt_wakeup) },
+	/*
+	 * Number of guest hypervisor service calls.来自官方
+	 */
 	{ "hypercalls", VCPU_STAT(hypercalls) },
+	/*
+	 * Number of guest interrupt window request exits.来自官方
+	 */ 
 	{ "request_irq", VCPU_STAT(request_irq_exits) },
+	/*
+	 * Number of guest exits due to external interrupts.来自官方
+	 */ 
 	{ "irq_exits", VCPU_STAT(irq_exits) },
+	/*
+	 * Count of full reloads of the host state
+	 * (currently tallies MSR setup and guest MSR reads). 来自官方
+	 */ 
 	{ "host_state_reload", VCPU_STAT(host_state_reload) },
+	/*
+	 * The number of times a VMENTRY reloaded the FPU state. The fpu_reload is 
+	 * incremented when a guest is using the Floating Point Unit (FPU).来自官方
+	 */
 	{ "fpu_reload", VCPU_STAT(fpu_reload) },
+	/*
+	 * Number of guest instructions emulated by the host.来自官方
+	 */
 	{ "insn_emulation", VCPU_STAT(insn_emulation) },
+	/*
+	 * Number of failed insn_emulation attempts.来自官方
+	 */ 
 	{ "insn_emulation_fail", VCPU_STAT(insn_emulation_fail) },
+	/*
+	 * Number of interrupts sent to guests.来自官方
+	 */ 
 	{ "irq_injections", VCPU_STAT(irq_injections) },
+	 /*
+	  * Number of Non-maskable Interrupt (NMI) injections to the guest.来自官方
+	  */
 	{ "nmi_injections", VCPU_STAT(nmi_injections) },
 	{ "req_event", VCPU_STAT(req_event) },
 	{ "l1d_flush", VCPU_STAT(l1d_flush) },
+	/*
+	 * Number of invalidated shadow pages.来自官方
+	 */
 	{ "mmu_shadow_zapped", VM_STAT(mmu_shadow_zapped) },
+	/*
+	 * Number of guest page table entry (PTE) write operations.来自官方
+	 */ 
 	{ "mmu_pte_write", VM_STAT(mmu_pte_write) },
+	/*
+	 * Number of page table entry (PTE) destruction operations.来自官方
+	 */ 
 	{ "mmu_pte_updated", VM_STAT(mmu_pte_updated) },
+	/*
+	 * Number of page directory entry (PDE) destruction operations.来自官方
+	 */
 	{ "mmu_pde_zapped", VM_STAT(mmu_pde_zapped) },
+	/*
+	 * Detection count of excessive write operations to an MMU page.来自官方
+	 * This counts detected write operations not of individual write operations.
+	 */
 	{ "mmu_flooded", VM_STAT(mmu_flooded) },
+	/*
+	 * Number of shadow pages that can be reclaimed.来自官方
+	 */ 
 	{ "mmu_recycled", VM_STAT(mmu_recycled) },
+	/*
+	 * Number of KVM MMU shadow pages created.来自官方
+	 */
 	{ "mmu_cache_miss", VM_STAT(mmu_cache_miss) },
+	/*
+	 * Number of non-synchronized pages which are not yet unlinked.来自官方
+	 */
 	{ "mmu_unsync", VM_STAT(mmu_unsync) },
+	/*
+	 * Number of remote (sibling CPU) Translation Lookaside Buffer (TLB) flush requests.来自官方
+	 */ 
 	{ "remote_tlb_flush", VM_STAT(remote_tlb_flush) },
+	/*
+	 * Number of large pages currently in use.来自官方
+	 */
 	{ "largepages", VM_STAT(lpages) },
 	{ "max_mmu_page_hash_collisions",
 		VM_STAT(max_mmu_page_hash_collisions) },
