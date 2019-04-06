@@ -173,6 +173,7 @@ static struct kvm_shared_msrs __percpu *shared_msrs;
 struct kvm_stats_debugfs_item debugfs_entries[] = {
 	/*
 	 * Number of fixed (non-paging) page table entry (PTE) maps. 来自官方
+	 * host设置PTE页表的数量 ~jeff 
 	 */
 	{ "pf_fixed", VCPU_STAT(pf_fixed) },
 	/*
@@ -180,8 +181,12 @@ struct kvm_stats_debugfs_item debugfs_entries[] = {
 	 * ept=0的情况下才会出现page fault guest ~jeff 
 	 */
 	{ "pf_guest", VCPU_STAT(pf_guest) },
-	/* Number of tlb_flush operations performed by the hypervisor 来自官方 */
+	/*
+	 * 比如guest cr3切换，hypervisor监听到之后主动tlb_flush 
+	 * Number of tlb_flush operations performed by the hypervisor 来自官方 
+	 */
 	{ "tlb_flush", VCPU_STAT(tlb_flush) },
+	
 	/* 刷新线性地址对应的tlb ~jeff */
 	{ "invlpg", VCPU_STAT(invlpg) },
 	/*
@@ -244,6 +249,9 @@ struct kvm_stats_debugfs_item debugfs_entries[] = {
 	{ "fpu_reload", VCPU_STAT(fpu_reload) },
 	/*
 	 * Number of guest instructions emulated by the host.来自官方
+	 * 指令的模拟，如果在EPT=0的情况下，发生guest发生page_fault之后，
+	 * host模拟可以直接在原来的指令重新执行一遍发生host上的page fault，这样就建立
+	 * 了页表,用(emulation_type = EMULTYPE_ALLOW_RETRY)来指明重新执行指令 ~jeff
 	 */
 	{ "insn_emulation", VCPU_STAT(insn_emulation) },
 	/*
